@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  INTEREST
+  FEE
+}
+
+enum CreditStatus {
+  ACTIVE
+  PAID
+  DEFAULTED
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  ONLINE
+  OTHER
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(MEMBER)
+  phone        String?
+  document     String?
+  memberSince  DateTime  @default(now())
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  savingsAccount SavingsAccount?
+  credits        Credit[]
+  creditPayments CreditPayment[]
+}
+
+model SavingsAccount {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  balance       Decimal  @default(0) @db.Decimal(15, 2)
+  accountNumber String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+}
+
+model Transaction {
+  id              String          @id @default(cuid())
+  accountId       String
+  type            TransactionType
+  amount          Decimal         @db.Decimal(15, 2)
+  balanceAfter    Decimal         @db.Decimal(15, 2)
+  description     String
+  reference       String?
+  performedById   String
+  transactionDate DateTime        @default(now())
+  createdAt       DateTime        @default(now())
+
+  account SavingsAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+model Credit {
+  id             String       @id @default(cuid())
+  userId         String
+  principal      Decimal      @db.Decimal(15, 2)
+  monthlyRate    Decimal      @default(0.01) @db.Decimal(8, 6)
+  termMonths     Int
+  monthlyPayment Decimal      @db.Decimal(15, 2)
+  totalInterest  Decimal      @db.Decimal(15, 2)
+  totalToPay     Decimal      @db.Decimal(15, 2)
+  disbursedAt    DateTime     @default(now())
+  status         CreditStatus @default(ACTIVE)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amortization AmortizationEntry[]
+  payments     CreditPayment[]
+}
+
+model AmortizationEntry {
+  id            String   @id @default(cuid())
+  creditId      String
+  period        Int
+  paymentAmount Decimal  @db.Decimal(15, 2)
+  principalPart Decimal  @db.Decimal(15, 2)
+  interestPart  Decimal  @db.Decimal(15, 2)
+  balance       Decimal  @db.Decimal(15, 2)
+  dueDate       DateTime
+
+  credit Credit @relation(fields: [creditId], references: [id], onDelete: Cascade)
+}
+
+model CreditPayment {
+  id          String        @id @default(cuid())
+  creditId    String
+  userId      String
+  amount      Decimal       @db.Decimal(15, 2)
+  paymentDate DateTime      @default(now())
+  method      PaymentMethod @default(TRANSFER)
+  reference   String?
+  notes       String?
+  createdAt   DateTime      @default(now())
+
+  credit Credit @relation(fields: [creditId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

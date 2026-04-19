@@ -5,6 +5,7 @@ import { computeLoanSummary } from "@/lib/finance";
 
 // One-time setup endpoint — disabled after first run
 export async function GET(req: NextRequest) {
+  try {
   const secret = req.nextUrl.searchParams.get("secret");
   if (secret !== process.env.SETUP_SECRET) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -105,4 +106,8 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, message: "Base de datos lista con datos demo" });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }

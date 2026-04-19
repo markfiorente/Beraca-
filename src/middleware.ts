@@ -1,30 +1,7 @@
-import { auth } from "@/lib/auth";
-import { NextResponse } from "next/server";
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth.config";
 
-export default auth((req) => {
-  const { pathname } = req.nextUrl;
-  const session = req.auth;
-
-  // Public routes
-  if (pathname === "/login" || pathname.startsWith("/api/auth")) {
-    if (session) {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
-    }
-    return NextResponse.next();
-  }
-
-  // Protected routes — require authentication
-  if (!session) {
-    return NextResponse.redirect(new URL("/login", req.url));
-  }
-
-  // Admin routes — require ADMIN role
-  if (pathname.startsWith("/admin") && session.user.role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
-  }
-
-  return NextResponse.next();
-});
+export default NextAuth(authConfig).auth;
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|public).*)"],
